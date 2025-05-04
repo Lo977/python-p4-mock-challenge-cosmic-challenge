@@ -26,7 +26,8 @@ class Planet(db.Model, SerializerMixin):
     nearest_star = db.Column(db.String)
 
     # Add relationship
-
+    missions = db.relationship('Mission', back_populates = 'planet', cascade="all, delete-orphan")
+    serialize_rules = ('-missions.planet',) 
     # Add serialization rules
 
 
@@ -34,27 +35,40 @@ class Scientist(db.Model, SerializerMixin):
     __tablename__ = 'scientists'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    field_of_study = db.Column(db.String)
+    name = db.Column(db.String, nullable=False)
+    field_of_study = db.Column(db.String, nullable=False)
 
     # Add relationship
+    missions = db.relationship('Mission',back_populates = 'scientist', cascade="all, delete-orphan")
+    serialize_rules = ('-missions.scientist',)
 
     # Add serialization rules
 
     # Add validation
-
+    @validates('name', 'field_of_study')
+    def validate_name_and_field(self, key, value):
+        if not value:
+            raise ValueError(f"{key} cannot be empty")
+        return value
 
 class Mission(db.Model, SerializerMixin):
     __tablename__ = 'missions'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-
+    name = db.Column(db.String,nullable=False)
+    scientist_id = db.Column(db.Integer, db.ForeignKey('scientists.id'), nullable=False)
+    planet_id = db.Column(db.Integer, db.ForeignKey('planets.id'),nullable=False)
     # Add relationships
-
+    scientist = db.relationship('Scientist', back_populates='missions')
+    planet = db.relationship('Planet', back_populates = 'missions')
+    serialize_rules = ('-scientist.missions', '-planet.missions',)
     # Add serialization rules
 
     # Add validation
-
+    @validates('name', 'scientist_id', 'planet_id')
+    def validate_name_and_ids(self,key,value):
+        if not value:
+            raise ValueError(f"{key} cannot be empty")
+        return value
 
 # add any models you may need.

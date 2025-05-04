@@ -17,13 +17,91 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False
 
 migrate = Migrate(app, db)
-
+api = Api(app)
 db.init_app(app)
 
 
 @app.route('/')
 def home():
-    return ''
+    return 'Welcome to the Space Missions API!'
+
+class ScientistResource(Resource):
+    def get(self,scientist_id=None):
+       if scientist_id is not None:
+           scientist = Scientist.query.get(scientist_id)
+           if scientist:
+               return scientist.to_dict(), 200
+           return {"error": "Scientist not found"}, 404
+       scientists = Scientist.query.all()
+       return [scientist.to_dict(rules=('-missions',)) for scientist in scientists], 200
+    
+    def post(self):
+        try:
+            data = request.get_json()
+            name = data['name']
+            field_of_study = data['field_of_study']
+            if not name or not field_of_study:
+                raise ValueError
+            
+            new_scientist = Scientist(
+                name = name,
+                field_of_study= field_of_study
+            )
+            db.session.add(new_scientist)
+            db.session.commit()
+            return new_scientist.to_dict(),201
+        except Exception:
+            return {"errors":"validations erroes"}, 422
+        
+
+    def patch(self,scientist_id=None):
+        scientist = Scientist.query.get(scientist_id)
+        if not scientist:
+            return {'error':'scientist not found'}, 404
+        try:
+            data = request.get_json()
+            scientist.name = data['name']
+            scientist.field_of_study =data['field_of_study']    
+            db.session.commit()
+            return scientist.to_dict(),202
+        except Exception:
+            return {"errors":"scientist update error"}, 404
+
+    
+    def delete(self,scientist_id=None):
+        scientist = Scientist.query.get(scientist_id)
+        if not scientist:
+            raise ValueError
+        db.session.delete(scientist)
+        db.session.commit() 
+        return {},204
+    
+class PlanetsResource(Resource):
+    def get(self):
+        return [planet.to_dict(rules=('-missions',)) for planet in Planet.query.all()],200
+class MissionsResource(Resource):
+    def post(self):
+        data = request.get_json()
+        name = data['name']
+        scientist_id = data['scientist_id']
+        planet_id = data['planet_id']
+        if not name or not scientist_id or not planet_id:
+            return {"errors":"missing values"},404  
+        try:
+            new_mission = Mission(
+                name=name,
+                scientist_id=scientist_id,
+                planet_id=planet_id
+            )
+            db.session.add(new_mission)
+            db.session.commit()
+            return new_mission.to_dict(),201
+        except Exception:
+            return {'error':["validation errors"]},404
+
+api.add_resource(ScientistResource, '/scientists','/scientists/<int:scientist_id>')
+api.add_resource(PlanetsResource,"/planets")
+api.add_resource(MissionsResource, "/missions")
 
 
 if __name__ == '__main__':
