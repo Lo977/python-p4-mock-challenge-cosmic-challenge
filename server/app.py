@@ -54,7 +54,7 @@ class ScientistResource(Resource):
         except Exception:
             return {
                 "errors": ["validation errors"]
-            }, 422
+            }, 400
 
     def patch(self, scientist_id=None):
         scientist = Scientist.query.get(scientist_id)
@@ -71,7 +71,7 @@ class ScientistResource(Resource):
         except Exception:
             return {
                 "errors": ["validation errors"]
-            }, 404
+            }, 400
 
     def delete(self, scientist_id=None):
         scientist = Scientist.query.get(scientist_id)
@@ -96,7 +96,7 @@ class MissionsResource(Resource):
         scientist_id = data['scientist_id']
         planet_id = data['planet_id']
         if not name or not scientist_id or not planet_id:
-            raise ValueError
+            return {'errors': ["validation errors"]}, 400
         try:
             new_mission = Mission(
                 name=name,
@@ -107,7 +107,7 @@ class MissionsResource(Resource):
             db.session.commit()
             return new_mission.to_dict(), 201
         except Exception:
-            return {'error': ["validation errors"]}, 404
+            return {'errors': ["validation errors"]}, 400
 
 
 api.add_resource(ScientistResource, '/scientists',
